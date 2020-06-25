@@ -20,6 +20,7 @@ void simulate() {
 }
 
 void simulate_step(struct memOperation *operation) {
+//Aqui empieza mi TFG
 }
 
 void incrementDoubleStatistics(char *component, char *property, double value) {
