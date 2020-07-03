@@ -45,12 +45,44 @@
       int setBits;
   };
 
+  struct structDisk
+  {
+      long size;		     // Tamaño de la memoria en bytes. Ver Nota 2.
+      double access_time;	     // Tiempo de acceso en nanosegundos.
+      double access_time_burst;
+      long page_size;
+      long page_base_address;
+  };
+
+  struct structTLB
+  {
+      long line_size;		     // Tamaño de line en bytes. Ver Nota 2, aunque no has mucho sentido prácitco, pero seamos coherentes.
+      long size;		     // Tamaño cache en bytes. Ver Nota 2.
+      long write_policy;	     // Política de escritura: wt = write through, wb = write back
+      long replacement;		     // Política de reemplazo: lru, rand
+      double access_time;
+  };
+
+  struct structMMU
+  {
+      long line_size;		     // Tamaño de line en bytes. Ver Nota 2, aunque no has mucho sentido prácitco, pero seamos coherentes.
+      long size;		     // Tamaño cache en bytes. Ver Nota 2.
+      double access_time;
+  };
+
+
   #define NCLAVES_CPU 4
   char* keysCPU[NCLAVES_CPU];
   #define NCLAVES_MEMORY 5
   char* keysMEMORY[NCLAVES_MEMORY];
   #define NCLAVES_CACHE 8
   char* keysCACHE[NCLAVES_CACHE];
+  #define NCLAVES_DISK 5
+  char* keysDISK[NCLAVES_DISK];
+  #define NCLAVES_TLB 5
+  char* keysTLB[NCLAVES_TLB];
+  #define NCLAVES_MMU 3
+  char* keysMMU[NCLAVES_MMU];
 
   #define MAX_CACHES 10
   int numberCaches;
@@ -60,6 +92,9 @@
   struct structCpu cpu;
   struct structMemory memory;
   struct structCache caches[MAX_CACHES];
+  struct structDisk disk;
+  struct structTLB tlb;
+  struct structMMU mmu;
 
   dictionary *readConfigurationFile(char * file);
   int parseConfiguration(dictionary *ini);

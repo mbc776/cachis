@@ -10,6 +10,9 @@ char* str_writePolicy[]= {"wt", "wb"};
 char* keysCPU[]= {"word_width", "address_width", "frequency", "trace_file"};
 char* keysMEMORY[]= {"size", "access_time_1","access_time_burst", "page_size", "page_base_address"};
 char* keysCACHE[]= {"line_size", "size","asociativity", "write_policy", "replacement","separated","column_bit_mask", "access_time"};
+char* keysDISK[]= {"size", "access_time_1", "access_time_burst", "page_size", "page_base_address"};
+char* keysTLB[]= {"line_size", "size", "write_policy", "replacement", "access_time"};
+char* keysMMU[]= {"line_size", "size", "access_time"};
 char* str_true[]= {"1", "yes", "true"};
 char* str_false[]= {"0","no","false"};
 
@@ -149,6 +152,9 @@ dictionary *readConfigurationFile(char * ini_name) {
 
     int numberCPUs = 0;
     int numberMemories = 0;
+    int numberDisks = 0;
+    int numberTLBs = 0;
+    int numberMMUs = 0;
 
     /* Check that all the configuration file sections are correct.
      * No missing sections. No unknown sections. */
@@ -194,8 +200,20 @@ dictionary *readConfigurationFile(char * ini_name) {
                 }
                 checkSectionKeys(ini, section, NCLAVES_CACHE, keysCACHE, &errors);
             }
-        // If the section name isn't "cpu" or "memory" and section name isn't like "cache..." then error.
-        } else {
+        // If the name of the section is disk
+        } else if(strcmp(section, "disk")==0) {
+	    // Count disk sections. There can be only one memory section
+	    numberDisks++;
+	// If the name of the section is tlb
+	} else if(strcmp(section, "tlb")==0) {
+	    // Count tlb sections. There can be only one tlb section
+	    numberTLBs++;
+	// If the name of the section is mmu
+	} else if(strcmp(section, "mmu")==0) {
+	    // Count mmu sections. There can be only one mmu section
+	    numberMMUs++;
+	// If the section name isn't "cpu" or "memory" and section name isn't like "cache..." then error.
+	} else {
             fprintf(stderr,"Error: Unknown section name [%s]\n", section);
             errors++;
         }
@@ -223,6 +241,30 @@ dictionary *readConfigurationFile(char * ini_name) {
     if(numberCaches>MAX_CACHES) {
         fprintf(stderr,"Error: The number of caches is excesive.\n");
         errors++;
+    }
+
+    // Check the optional [disk] section
+    if(numberDisks>1) {
+	fprintf(stderr,"Error: The number of disks is excesive.\n");
+	errors++;
+    } else {
+	checkSectionKeys(ini, "disk", NCLAVES_DISK, keysDISK, &errors);
+    }
+
+    // Check the optional [tlb] section
+    if(numberTLBs>1) {
+	fprintf(stderr,"Error: The number of TLBs is excesive.\n");
+	errors++;
+    } else {
+	checkSectionKeys(ini, "tlb", NCLAVES_TLB, keysTLB, &errors);
+    }
+
+    // Check the optional [mmu] section
+    if(numberMMUs>1) {
+	fprintf(stderr,"Error: The number of MMUs is excesive.\n");
+	errors++;
+    } else {
+	checkSectionKeys(ini, "mmu", NCLAVES_MMU, keysMMU, &errors);
     }
 
     // End with error message if there has been any errors
@@ -449,6 +491,85 @@ int parseConfiguration(dictionary *ini) {
        if(caches[cacheNumber].separated){
              caches[cacheNumber].numLines=(caches[cacheNumber].numLines)/2;
        }
+    }
+
+    // READING DISK CONFIGURATION///////////////////////////////////////////////
+
+    parseConfLongK1024(ini,"disk:size",&disk.size,&errors);
+    parseConfDouble(ini,"disk:access_time",&disk.access_time,&errors);
+    parseConfDouble(ini,"disk:access_time_burst",&disk.access_time_burst, &errors);
+    parseConfLongK1024(ini,"disk:page_size",&disk.page_size,&errors);
+    parseConfAddress(ini,"disk:page_base_address",&disk.page_base_address,&errors);
+
+    if(memory.size%disk.page_size!=0){
+	fprintf(stderr,"Error: disk:size must be a multiple of disk:page_size\n");
+        errors++;
+    }
+    if(!isPowerOf2(disk.page_size)){
+	fprintf(stderr,"Error: disk:page_size must be power of 2\n");
+        errors++;
+    }
+    if(disk.page_base_address%disk.page_size!=0){
+	fprintf(stderr,"Error: disk:page_base_address is invalid\n");
+        errors++;
+    }
+    if(memory.page_base_address<0){
+	fprintf(stderr,"Error: disk:page_base_address is out of range.\n");
+        errors++;
+    }
+
+    // READING TLB CONFIGURATION///////////////////////////////////////////////
+
+    parseConfLongK1024(ini,"tlb:line_size",&tlb.line_size,&errors);
+    parseConfLongK1024(ini,"tlb:size",&tlb.size,&errors);
+    // reading key tlb:write_policy
+    const char * tlb_write_policy=iniparser_getstring(ini,"tlb:write_policy", NULL);
+    long long_write_policy=parseWritePolicy(tlb_write_policy);
+    if(long_write_policy==-1) {
+    fprintf(stderr,"Error: tlb:write_policy value is not valid\n");
+        errors++;
+    } else if(long_write_policy==-2) {
+    fprintf(stderr,"Error: Missing value tlb:write_policy\n");
+        errors++;
+    } else {
+        tlb.write_policy=long_write_policy;
+    }
+    // reading key tlb:replacement
+    const char * tlb_replacement=iniparser_getstring(ini,"tlb:replacement", NULL);
+    long long_replacement=parseReplacementPolicy(tlb_replacement);
+    if(long_replacement==-1) {
+        fprintf(stderr,"Error: replacement value for tlb is not valid.\n");
+        errors++;
+    } else if(long_replacement==-2) {
+        fprintf(stderr,"Error: Missing replacement value for tlb.\n");
+        errors++;
+    } else {
+        tlb.replacement=long_replacement;
+    }
+    parseConfDouble(ini,"tlb:access_time",&tlb.access_time,&errors);
+
+    if(!isPowerOf2(tlb.line_size)){
+        fprintf(stderr,"Error: tlb:line_size must be power of 2\n");
+        errors++;
+    }
+    if((tlb.size)%(tlb.line_size)!=0){
+	fprintf(stderr,"Error: tlb:size must be a multiple of tlb:line_size\n");
+        errors++;
+    }
+
+    // READING MMU CONFIGURATION///////////////////////////////////////////////
+
+    parseConfLongK1024(ini,"mmu:line_size",&mmu.line_size,&errors);
+    parseConfLongK1024(ini,"mmu:size",&mmu.size,&errors);
+    parseConfDouble(ini,"mmu:access_time",&mmu.access_time,&errors);
+
+    if(!isPowerOf2(mmu.line_size)){
+        fprintf(stderr,"Error: mmu:line_size must be power of 2\n");
+        errors++;
+    }
+    if((mmu.size)%(mmu.line_size)!=0){
+	fprintf(stderr,"Error: mmu:size must be a multiple of tlb:line_size\n");
+        errors++;
     }
 
     if(errors>0) {
