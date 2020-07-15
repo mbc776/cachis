@@ -98,7 +98,7 @@ void parseConfDouble(dictionary *ini, const char *key, double *confVariable, int
         fprintf(stderr,"Error: %s value is not valid\n", key);
         (*errors)++;
     } else if(value == -2) {
-        fprintf(stderr,"Error: Missing mandatory key %s\n", key);
+        fprintf(stderr,"Error: Missing mandat||ory key %s\n", key);
         (*errors)++;
     } else {
         *confVariable = value;
@@ -496,7 +496,7 @@ int parseConfiguration(dictionary *ini) {
     // READING DISK CONFIGURATION///////////////////////////////////////////////
 
     parseConfLongK1024(ini,"disk:size",&disk.size,&errors);
-    parseConfDouble(ini,"disk:access_time",&disk.access_time,&errors);
+    parseConfDouble(ini,"disk:access_time_1",&disk.access_time_1,&errors);
     parseConfDouble(ini,"disk:access_time_burst",&disk.access_time_burst, &errors);
     parseConfLongK1024(ini,"disk:page_size",&disk.page_size,&errors);
     parseConfAddress(ini,"disk:page_base_address",&disk.page_base_address,&errors);

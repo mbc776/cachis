@@ -48,7 +48,7 @@
   struct structDisk
   {
       long size;		     // Tamaño de la memoria en bytes. Ver Nota 2.
-      double access_time;	     // Tiempo de acceso en nanosegundos.
+      double access_time_1;	     // Tiempo de acceso en nanosegundos.
       double access_time_burst;
       long page_size;
       long page_base_address;
